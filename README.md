@@ -1,5 +1,5 @@
 <h3 class="code-line" data-line-start=1 data-line-end=2 ><a id="General_1"></a>General</h3>
-<p class="has-line-data" data-line-start="2" data-line-end="3">This is my final project written on Python. This application allows to get, add, update, delete both musical instruments or manufacturers (in my case). </p>
+<p class="has-line-data" data-line-start="2" data-line-end="3">This is my final project written on Python. Used Docker, PostgreSQL, SQLAlchemy etc. Notice to use them too. This application allows to get, add, update, delete both musical instruments or manufacturers (in my case). Feel free to download all requirements from requirements.txt in case you haven't installed yet.</p>
 <hr>
 <h3 class="code-line" data-line-start=5 data-line-end=6 ><a id="Features_5"></a>Features</h3>
 <ul>
@@ -20,8 +20,12 @@
 <li class="has-line-data" data-line-start="13" data-line-end="15">Alembic</li>
 </ul>
 <hr>
-<h3 class="code-line" data-line-start=16 data-line-end=17 ><a id="Update_16"></a>How does it look like?</h3>
-![Swagger UI](https://imgur.com/7YOkhqJ)
+<h3 class="code-line" data-line-start=16 data-line-end=17 ><a id="Look_16"></a>How does it look like?</h3>
+Looks like that in Swagger. Pretty simple.
+<img src="https://i.imgur.com/7YOkhqJ.png"/>
+<hr>
+<h3 class="code-line" data-line-start=16 data-line-end=17 ><a id="Look_16"></a>What is it for?</h3>
+For other github users. For other students. For everyone :3
 <hr>
 <h3 class="code-line" data-line-start=16 data-line-end=17 ><a id="Update_16"></a>Update</h3>
 <p class="has-line-data" data-line-start="17" data-line-end="18">I will not work on this project anymore. Perhaps just changing some little things I'd not like.</p>
