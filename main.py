@@ -23,16 +23,17 @@ class ValidationResponse(BaseModel):
     message: str
 
 
-class ManufacturerDto(BaseModel):
-    id: PositiveInt
-    full_name: str
-
-
 class InstrumentDto(BaseModel):
     id: PositiveInt
     name: str
     price: PositiveFloat
-    manufacturer: ManufacturerDto
+    manufacturer_id: int
+
+
+class ManufacturerDto(BaseModel):
+    id: PositiveInt
+    full_name: str
+    instruments: list[InstrumentDto]
 
 
 class StoreManager:
@@ -146,7 +147,7 @@ def get_manufacturers():
 @app.get("/manufacturers/{manufacturer_id}", response_model=ManufacturerDto)
 def get_one_manufacturer(manufacturer_id: int):
     manufacturer = stmanager.get_one_manufacturer(manufacturer_id)
-    return manufacturer
+    return ManufacturerDto.model_validate(manufacturer, from_attributes=True)
 
 
 @app.post("/instruments", response_model=InstrumentDto)
