@@ -1,9 +1,11 @@
+from typing import Optional
+
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, PositiveInt, PositiveFloat
-from sqlalchemy import URL, create_engine
+from sqlalchemy import URL, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
-from models import Instrument, Manufacturer
+from models import Manufacturer, Instrument
 
 
 url = URL.create(
@@ -24,16 +26,41 @@ class ValidationResponse(BaseModel):
 
 
 class InstrumentDto(BaseModel):
-    id: PositiveInt
+    id: Optional[PositiveInt]
     name: str
     price: PositiveFloat
     manufacturer_id: int
 
 
 class ManufacturerDto(BaseModel):
+    id: Optional[PositiveInt]
+    full_name: str
+
+
+class ManufacturerInfo(BaseModel):
     id: PositiveInt
     full_name: str
     instruments: list[InstrumentDto]
+
+
+mapping = {'a': 'ф', 'b': 'і', 'c': 'с', 'd': 'в', 'e': 'у', 'f': 'а', 'g': 'п', 'h': 'р', 'i': 'ш', 'j': 'о', 'k': 'л',
+            'l': 'д', 'm': 'ь', 'n': 'т', 'o': 'щ', 'p': 'з', 'q': 'й', 'r': 'к', 's': 'і', 't': 'е', 'u': 'г', 'v': 'м',
+            'w': 'ц', 'x': 'ч', 'y': 'н', 'z': 'я',
+    'A': 'Ф', 'B': 'І', 'C': 'С', 'D': 'В', 'E': 'У', 'F': 'А', 'G': 'П', 'H': 'Р', 'I': 'Ш', 'J': 'О', 'K': 'Л', 'L': 'Д',
+            'M': 'Ь', 'N': 'Т', 'O': 'Щ', 'P': 'З', 'Q': 'Й', 'R': 'К', 'S': 'І', 'T': 'Е', 'U': 'Г', 'V': 'М', 'W': 'Ц',
+            'X': 'Ч', 'Y': 'Н', 'Z': 'Я'}
+
+reverse_mapping = {v: k for k, v in mapping.items()}
+
+
+def translate_to_english(text):
+    translated_text = ""
+    for char in text:
+        if char in reverse_mapping:
+            translated_text += reverse_mapping[char]
+        else:
+            translated_text += char
+    return translated_text
 
 
 class StoreManager:
@@ -58,16 +85,18 @@ class StoreManager:
         manufacturer = self.session.query(Manufacturer).filter(Manufacturer.id == manufacturer_id).first()
         if manufacturer is None:
             raise HTTPException(status_code=404, detail="Manufacturer not found")
-        return manufacturer
+        instruments = self.session.query(Instrument).filter(Instrument.manufacturer_id == manufacturer_id).all()
+        man_with_instruments = {"id": manufacturer.id, "full_name": manufacturer.full_name, "instruments": instruments}
+        return man_with_instruments
 
     def create_instrument(self, instrument: InstrumentDto):
-        manufacturer = self.session.query(Manufacturer).filter(Manufacturer.id == instrument.manufacturer.id).first()
+        manufacturer = self.session.query(Manufacturer).filter(Manufacturer.id == instrument.manufacturer_id).first()
         if manufacturer is None:
             raise HTTPException(status_code=404, detail="Manufacturer not found")
         new_instrument = Instrument(
             name=instrument.name,
             price=instrument.price,
-            manufacturer_id=instrument.manufacturer.id
+            manufacturer_id=instrument.manufacturer_id
         )
         self.session.add(new_instrument)
         self.session.commit()
@@ -116,6 +145,33 @@ class StoreManager:
         self.session.commit()
         return ValidationResponse(message="Manufacturer deleted")
 
+    def search_instruments(self, query: str):
+        translated = translate_to_english(query)
+        instruments = self.session.query(Instrument).filter(Instrument.name.like(f'%{translated}%')).all()
+        return instruments
+
+    def delete_all_instruments(self):
+        instruments = self.session.query(Instrument).all()
+
+        for instrument in instruments:
+            self.session.delete(instrument)
+
+        self.session.commit()
+        sql_statement = text(f"ALTER SEQUENCE {Instrument.__table__.name}_id_seq RESTART WITH 1")
+        self.session.execute(sql_statement)
+        self.session.commit()
+
+    def delete_all_manufacturers(self):
+        manufacturers = self.session.query(Manufacturer).all()
+
+        for manufacturer in manufacturers:
+            self.session.delete(manufacturer)
+
+        self.session.commit()
+        sql_statement = text(f"ALTER SEQUENCE {Manufacturer.__table__.name}_id_seq RESTART WITH 1")
+        self.session.execute(sql_statement)
+        self.session.commit()
+
 
 app = FastAPI(
     title="Music Instruments Store",
@@ -144,10 +200,10 @@ def get_manufacturers():
     return manufacturers
 
 
-@app.get("/manufacturers/{manufacturer_id}", response_model=ManufacturerDto)
+@app.get("/manufacturers/{manufacturer_id}", response_model=ManufacturerInfo)
 def get_one_manufacturer(manufacturer_id: int):
     manufacturer = stmanager.get_one_manufacturer(manufacturer_id)
-    return ManufacturerDto.model_validate(manufacturer, from_attributes=True)
+    return manufacturer
 
 
 @app.post("/instruments", response_model=InstrumentDto)
@@ -183,6 +239,24 @@ def delete_instrument(instrument_id: int):
 @app.delete("/manufacturers")
 def delete_manufacturer(manufacturer_id: int):
     res = stmanager.delete_manufacturer(manufacturer_id)
+    return res
+
+
+@app.get("/instruments/search/", response_model=list[InstrumentDto])
+def search_instruments(query: str = Query(..., min_length=1)):
+    instruments = stmanager.search_instruments(query)
+    return instruments
+
+
+@app.delete("/instruments/")
+def delete_all_instruments():
+    res = stmanager.delete_all_instruments()
+    return res
+
+
+@app.delete("/manufacturers/")
+def delete_all_manufacturers():
+    res = stmanager.delete_all_manufacturers()
     return res
 
 
